@@ -24,7 +24,7 @@ export function TipPearli() {
         className="flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-card transition-transform hover:scale-[1.04] active:scale-95"
       >
         <Heart className="h-3.5 w-3.5" />
-        Tip Pearli
+        Give a tip
       </button>
       <TipModal open={open} onClose={() => setOpen(false)} />
     </>
@@ -74,7 +74,7 @@ function TipModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Tip Pearli"
+      aria-label="Give a tip"
       className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
     >
       <button
@@ -119,7 +119,7 @@ function TipModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           </div>
         ) : (
           <>
-            <h2 className="font-display text-3xl">Tip Pearli</h2>
+            <h2 className="font-display text-3xl">Give a tip</h2>
             <p className="mt-1.5 text-sm text-muted-foreground">
               Every tip keeps the apps growing. Pick an amount:
             </p>

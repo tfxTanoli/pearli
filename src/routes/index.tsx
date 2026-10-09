@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight, Bell, Lock } from "lucide-react";
 import micIconAsset from "@/assets/audiowallet-icon.png.asset.json";
 import { PearliHeader } from "@/components/pearli-header";
+import { PushOptInButton } from "@/components/push-opt-in-button";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -10,13 +11,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Pearli's links: AudioWallet, the web app for carrying your audio, and Market Notes, coming soon. Tip Pearli to support the work.",
+          "Pearli's links: AudioWallet, the web app for carrying your audio, and Market Notes, coming soon. Give a tip to support the work.",
       },
       { property: "og:title", content: "Pearli — Links" },
       {
         property: "og:description",
         content:
-          "Pearli's links: AudioWallet, the web app for carrying your audio, and Market Notes, coming soon. Tip Pearli to support the work.",
+          "Pearli's links: AudioWallet, the web app for carrying your audio, and Market Notes, coming soon. Give a tip to support the work.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -38,13 +39,10 @@ function PearliPage() {
 
         {/* Links */}
         <div className="mt-6 w-full space-y-3.5">
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-medium text-primary-foreground shadow-card transition-transform hover:scale-[1.02] active:scale-[0.98]"
-          >
+          <PushOptInButton className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-medium text-primary-foreground shadow-card transition-transform hover:scale-[1.02] active:scale-[0.98]">
             <Bell className="h-4 w-4" />
             Access discounts from ChatGPT + more
-          </button>
+          </PushOptInButton>
           <p className="px-2 text-center text-sm italic leading-relaxed text-muted-foreground">
             Want more exclusive gifts? Turn on push notifications and receive
             exclusive gifts and join the growth of Pearli.

@@ -111,6 +111,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Work+Sans:wght@400;500;600;700&display=swap",
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      // Web app manifest: lets iPhone/iPad users add Pearli to the Home Screen,
+      // which iOS requires before a site can receive push notifications.
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/icon-256.png" },
     ],
   }),
   shellComponent: RootShell,

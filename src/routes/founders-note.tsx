@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Bell } from "lucide-react";
 import { PearliHeader } from "@/components/pearli-header";
+import { PushOptInButton } from "@/components/push-opt-in-button";
 
 export const Route = createFileRoute("/founders-note")({
   head: () => ({
@@ -54,13 +55,10 @@ function FoundersNotePage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-card transition-transform hover:scale-[1.02] active:scale-[0.98]"
-        >
+        <PushOptInButton className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-card transition-transform hover:scale-[1.02] active:scale-[0.98]">
           <Bell className="h-4 w-4" />
           Access discounts from ChatGPT + more
-        </button>
+        </PushOptInButton>
 
         <p className="mt-10 text-center text-xs text-muted-foreground">© 2026</p>
       </main>

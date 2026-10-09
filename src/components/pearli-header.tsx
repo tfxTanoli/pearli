@@ -4,7 +4,7 @@ import { TipPearli } from "./tip-pearli";
 
 /**
  * Shared Pearli header: wordmark (with a back arrow on sub-pages) on the left,
- * Tip Pearli button on the right.
+ * "Give a tip" button on the right.
  */
 export function PearliHeader({ showBack = false }: { showBack?: boolean }) {
   return (

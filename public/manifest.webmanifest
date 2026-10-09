@@ -1,0 +1,11 @@
+{
+  "name": "Pearli",
+  "short_name": "Pearli",
+  "description": "AudioWallet and Market Notes — everything Pearli, in one place.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f6f2",
+  "theme_color": "#f7f6f2",
+  "icons": [{ "src": "/icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" }]
+}

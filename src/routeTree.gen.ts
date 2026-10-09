@@ -13,6 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as FoundersNoteRouteImport } from './routes/founders-note'
 import { Route as OffersRouteImport } from './routes/offers'
+import { Route as BlogIndexRouteImport } from './routes/blog/index'
+import { Route as ApiPushConfigRouteImport } from './routes/api/push/config'
+import { Route as ApiPushSendRouteImport } from './routes/api/push/send'
+import { Route as ApiPushSubscribeRouteImport } from './routes/api/push/subscribe'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,39 +38,97 @@ const OffersRoute = OffersRouteImport.update({
   path: '/offers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BlogRoute,
+} as any)
+const ApiPushConfigRoute = ApiPushConfigRouteImport.update({
+  id: '/api/push/config',
+  path: '/api/push/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushSendRoute = ApiPushSendRouteImport.update({
+  id: '/api/push/send',
+  path: '/api/push/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushSubscribeRoute = ApiPushSubscribeRouteImport.update({
+  id: '/api/push/subscribe',
+  path: '/api/push/subscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/founders-note': typeof FoundersNoteRoute
   '/offers': typeof OffersRoute
+  '/blog/': typeof BlogIndexRoute
+  '/api/push/config': typeof ApiPushConfigRoute
+  '/api/push/send': typeof ApiPushSendRoute
+  '/api/push/subscribe': typeof ApiPushSubscribeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/blog': typeof BlogRoute
   '/founders-note': typeof FoundersNoteRoute
   '/offers': typeof OffersRoute
+  '/blog': typeof BlogIndexRoute
+  '/api/push/config': typeof ApiPushConfigRoute
+  '/api/push/send': typeof ApiPushSendRoute
+  '/api/push/subscribe': typeof ApiPushSubscribeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/blog': typeof BlogRoute
+  '/blog': typeof BlogRouteWithChildren
   '/founders-note': typeof FoundersNoteRoute
   '/offers': typeof OffersRoute
+  '/blog/': typeof BlogIndexRoute
+  '/api/push/config': typeof ApiPushConfigRoute
+  '/api/push/send': typeof ApiPushSendRoute
+  '/api/push/subscribe': typeof ApiPushSubscribeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/blog' | '/founders-note' | '/offers'
+  fullPaths:
+    | '/'
+    | '/blog'
+    | '/founders-note'
+    | '/offers'
+    | '/blog/'
+    | '/api/push/config'
+    | '/api/push/send'
+    | '/api/push/subscribe'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/blog' | '/founders-note' | '/offers'
-  id: '__root__' | '/' | '/blog' | '/founders-note' | '/offers'
+  to:
+    | '/'
+    | '/founders-note'
+    | '/offers'
+    | '/blog'
+    | '/api/push/config'
+    | '/api/push/send'
+    | '/api/push/subscribe'
+  id:
+    | '__root__'
+    | '/'
+    | '/blog'
+    | '/founders-note'
+    | '/offers'
+    | '/blog/'
+    | '/api/push/config'
+    | '/api/push/send'
+    | '/api/push/subscribe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  BlogRoute: typeof BlogRoute
+  BlogRoute: typeof BlogRouteWithChildren
   FoundersNoteRoute: typeof FoundersNoteRoute
   OffersRoute: typeof OffersRoute
+  ApiPushConfigRoute: typeof ApiPushConfigRoute
+  ApiPushSendRoute: typeof ApiPushSendRoute
+  ApiPushSubscribeRoute: typeof ApiPushSubscribeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,14 +161,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OffersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof BlogRoute
+    }
+    '/api/push/config': {
+      id: '/api/push/config'
+      path: '/api/push/config'
+      fullPath: '/api/push/config'
+      preLoaderRoute: typeof ApiPushConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/send': {
+      id: '/api/push/send'
+      path: '/api/push/send'
+      fullPath: '/api/push/send'
+      preLoaderRoute: typeof ApiPushSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/subscribe': {
+      id: '/api/push/subscribe'
+      path: '/api/push/subscribe'
+      fullPath: '/api/push/subscribe'
+      preLoaderRoute: typeof ApiPushSubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface BlogRouteChildren {
+  BlogIndexRoute: typeof BlogIndexRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogIndexRoute: BlogIndexRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  BlogRoute: BlogRoute,
+  BlogRoute: BlogRouteWithChildren,
   FoundersNoteRoute: FoundersNoteRoute,
   OffersRoute: OffersRoute,
+  ApiPushConfigRoute: ApiPushConfigRoute,
+  ApiPushSendRoute: ApiPushSendRoute,
+  ApiPushSubscribeRoute: ApiPushSubscribeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
