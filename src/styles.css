@@ -1,0 +1,140 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Pearli design system — pearl white & black with an iridescent sheen.
+ * The @theme inline block maps CSS custom properties to Tailwind utilities.
+ * All colors use oklch.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sheen-1: var(--sheen-1);
+  --color-sheen-2: var(--sheen-2);
+  --color-sheen-3: var(--sheen-3);
+  --color-sheen-4: var(--sheen-4);
+  --color-users-badge: var(--users-badge);
+  --color-users-badge-foreground: var(--users-badge-foreground);
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --shadow-pearl: 0 24px 60px -24px oklch(0.2 0.02 260 / 0.28);
+  --shadow-card: 0 1px 2px oklch(0.2 0.02 260 / 0.05), 0 12px 32px -16px oklch(0.2 0.02 260 / 0.14);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.973 0.004 95);
+  --foreground: oklch(0.155 0.006 260);
+  --card: oklch(0.995 0.002 95);
+  --card-foreground: oklch(0.155 0.006 260);
+  --popover: oklch(0.995 0.002 95);
+  --popover-foreground: oklch(0.155 0.006 260);
+  --primary: oklch(0.155 0.006 260);
+  --primary-foreground: oklch(0.973 0.004 95);
+  --secondary: oklch(0.945 0.005 95);
+  --secondary-foreground: oklch(0.155 0.006 260);
+  --muted: oklch(0.945 0.005 95);
+  --muted-foreground: oklch(0.48 0.012 260);
+  --accent: oklch(0.945 0.005 95);
+  --accent-foreground: oklch(0.155 0.006 260);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.9 0.008 95);
+  --input: oklch(0.9 0.008 95);
+  --ring: oklch(0.155 0.006 260);
+  /* Iridescent pearl sheen */
+  --sheen-1: oklch(0.89 0.05 80);
+  --sheen-2: oklch(0.89 0.045 195);
+  --sheen-3: oklch(0.88 0.05 310);
+  --sheen-4: oklch(0.9 0.05 20);
+  /* Users badge — light purple pill, dark purple text */
+  --users-badge: oklch(0.93 0.055 300);
+  --users-badge-foreground: oklch(0.42 0.16 300);
+}
+
+.dark {
+  --background: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.984 0.003 247.858);
+  --card: oklch(0.208 0.042 265.755);
+  --card-foreground: oklch(0.984 0.003 247.858);
+  --popover: oklch(0.208 0.042 265.755);
+  --popover-foreground: oklch(0.984 0.003 247.858);
+  --primary: oklch(0.929 0.013 255.508);
+  --primary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: oklch(0.279 0.041 260.031);
+  --secondary-foreground: oklch(0.984 0.003 247.858);
+  --muted: oklch(0.279 0.041 260.031);
+  --muted-foreground: oklch(0.704 0.04 256.788);
+  --accent: oklch(0.279 0.041 260.031);
+  --accent-foreground: oklch(0.984 0.003 247.858);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.551 0.027 264.364);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    background-image:
+      radial-gradient(60rem 40rem at 88% -12%, oklch(0.9 0.035 300 / 30%), transparent 60%),
+      radial-gradient(52rem 38rem at -8% 104%, oklch(0.9 0.035 195 / 26%), transparent 62%),
+      radial-gradient(40rem 30rem at 50% 118%, oklch(0.91 0.035 70 / 22%), transparent 60%);
+    color: var(--color-foreground);
+  }
+}
+
+/* Iridescent pearl-sheen ring, slowly drifting */
+@keyframes sheen-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@utility sheen-ring {
+  background: conic-gradient(
+    from 210deg,
+    var(--color-sheen-1),
+    var(--color-sheen-2),
+    var(--color-sheen-3),
+    var(--color-sheen-4),
+    var(--color-sheen-1)
+  );
+}
+
+@utility sheen-spin {
+  animation: sheen-spin 16s linear infinite;
+}
