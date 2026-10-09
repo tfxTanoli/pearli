@@ -5,7 +5,7 @@ const MESSAGES: Record<PushOptInResult, string> = {
   subscribed: "You’re in. Pearli will send you a notification when there’s something new.",
   unsupported: "This browser doesn’t support push notifications.",
   "ios-install-required":
-    "On iPhone or iPad, add Pearli to your Home Screen (Share → Add to Home Screen), open it from there and tap again.",
+    "To get Pearli notifications on iPhone or iPad, Apple asks you to add Pearli to your Home Screen first: tap Share → Add to Home Screen, open Pearli from your Home Screen, then tap this button again.",
   denied: "Notifications are blocked for this site. You can allow them in your browser settings.",
   dismissed: "No problem. Tap again whenever you’d like notifications.",
   unavailable: "Notifications aren’t available right now. Please try again later.",

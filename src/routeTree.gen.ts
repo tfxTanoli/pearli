@@ -13,9 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as FoundersNoteRouteImport } from './routes/founders-note'
 import { Route as OffersRouteImport } from './routes/offers'
+import { Route as AdminNotificationsRouteImport } from './routes/admin/notifications'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as ApiPushConfigRouteImport } from './routes/api/push/config'
 import { Route as ApiPushSendRouteImport } from './routes/api/push/send'
+import { Route as ApiPushSettingsRouteImport } from './routes/api/push/settings'
 import { Route as ApiPushSubscribeRouteImport } from './routes/api/push/subscribe'
 import { Route as ApiStripeCheckoutRouteImport } from './routes/api/stripe/checkout'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
@@ -40,6 +42,11 @@ const OffersRoute = OffersRouteImport.update({
   path: '/offers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/admin/notifications',
+  path: '/admin/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -53,6 +60,11 @@ const ApiPushConfigRoute = ApiPushConfigRouteImport.update({
 const ApiPushSendRoute = ApiPushSendRouteImport.update({
   id: '/api/push/send',
   path: '/api/push/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushSettingsRoute = ApiPushSettingsRouteImport.update({
+  id: '/api/push/settings',
+  path: '/api/push/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPushSubscribeRoute = ApiPushSubscribeRouteImport.update({
@@ -76,9 +88,11 @@ export interface FileRoutesByFullPath {
   '/blog': typeof BlogRouteWithChildren
   '/founders-note': typeof FoundersNoteRoute
   '/offers': typeof OffersRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/blog/': typeof BlogIndexRoute
   '/api/push/config': typeof ApiPushConfigRoute
   '/api/push/send': typeof ApiPushSendRoute
+  '/api/push/settings': typeof ApiPushSettingsRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
   '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -87,9 +101,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/founders-note': typeof FoundersNoteRoute
   '/offers': typeof OffersRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/blog': typeof BlogIndexRoute
   '/api/push/config': typeof ApiPushConfigRoute
   '/api/push/send': typeof ApiPushSendRoute
+  '/api/push/settings': typeof ApiPushSettingsRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
   '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -100,9 +116,11 @@ export interface FileRoutesById {
   '/blog': typeof BlogRouteWithChildren
   '/founders-note': typeof FoundersNoteRoute
   '/offers': typeof OffersRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/blog/': typeof BlogIndexRoute
   '/api/push/config': typeof ApiPushConfigRoute
   '/api/push/send': typeof ApiPushSendRoute
+  '/api/push/settings': typeof ApiPushSettingsRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
   '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -114,9 +132,11 @@ export interface FileRouteTypes {
     | '/blog'
     | '/founders-note'
     | '/offers'
+    | '/admin/notifications'
     | '/blog/'
     | '/api/push/config'
     | '/api/push/send'
+    | '/api/push/settings'
     | '/api/push/subscribe'
     | '/api/stripe/checkout'
     | '/api/stripe/webhook'
@@ -125,9 +145,11 @@ export interface FileRouteTypes {
     | '/'
     | '/founders-note'
     | '/offers'
+    | '/admin/notifications'
     | '/blog'
     | '/api/push/config'
     | '/api/push/send'
+    | '/api/push/settings'
     | '/api/push/subscribe'
     | '/api/stripe/checkout'
     | '/api/stripe/webhook'
@@ -137,9 +159,11 @@ export interface FileRouteTypes {
     | '/blog'
     | '/founders-note'
     | '/offers'
+    | '/admin/notifications'
     | '/blog/'
     | '/api/push/config'
     | '/api/push/send'
+    | '/api/push/settings'
     | '/api/push/subscribe'
     | '/api/stripe/checkout'
     | '/api/stripe/webhook'
@@ -150,8 +174,10 @@ export interface RootRouteChildren {
   BlogRoute: typeof BlogRouteWithChildren
   FoundersNoteRoute: typeof FoundersNoteRoute
   OffersRoute: typeof OffersRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRoute
   ApiPushConfigRoute: typeof ApiPushConfigRoute
   ApiPushSendRoute: typeof ApiPushSendRoute
+  ApiPushSettingsRoute: typeof ApiPushSettingsRoute
   ApiPushSubscribeRoute: typeof ApiPushSubscribeRoute
   ApiStripeCheckoutRoute: typeof ApiStripeCheckoutRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
@@ -187,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OffersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/admin/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/': {
       id: '/blog/'
       path: '/'
@@ -206,6 +239,13 @@ declare module '@tanstack/react-router' {
       path: '/api/push/send'
       fullPath: '/api/push/send'
       preLoaderRoute: typeof ApiPushSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/settings': {
+      id: '/api/push/settings'
+      path: '/api/push/settings'
+      fullPath: '/api/push/settings'
+      preLoaderRoute: typeof ApiPushSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/push/subscribe': {
@@ -247,8 +287,10 @@ const rootRouteChildren: RootRouteChildren = {
   BlogRoute: BlogRouteWithChildren,
   FoundersNoteRoute: FoundersNoteRoute,
   OffersRoute: OffersRoute,
+  AdminNotificationsRoute: AdminNotificationsRoute,
   ApiPushConfigRoute: ApiPushConfigRoute,
   ApiPushSendRoute: ApiPushSendRoute,
+  ApiPushSettingsRoute: ApiPushSettingsRoute,
   ApiPushSubscribeRoute: ApiPushSubscribeRoute,
   ApiStripeCheckoutRoute: ApiStripeCheckoutRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,

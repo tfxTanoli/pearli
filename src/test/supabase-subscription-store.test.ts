@@ -18,25 +18,46 @@ function mockFetch(handler: (url: string, init: RequestInit) => Response) {
 describe("SupabaseSubscriptionStore", () => {
   const store = new SupabaseSubscriptionStore(CONFIG);
 
-  it("upserts a subscription by endpoint", async () => {
-    const fetchMock = mockFetch(() => new Response(null, { status: 201 }));
-    await store.save({
-      endpoint: ENDPOINT,
-      keys: { p256dh: "pub", auth: "sec" },
-      createdAt: "2026-01-01T00:00:00Z",
-    });
+  const record = {
+    endpoint: ENDPOINT,
+    keys: { p256dh: "pub", auth: "sec" },
+    createdAt: "2026-01-01T00:00:00Z",
+  };
 
+  it("inserts a new subscription and reports it as new", async () => {
+    const fetchMock = mockFetch(() => Response.json([{ endpoint: ENDPOINT }], { status: 201 }));
+    await expect(store.save(record)).resolves.toBe(true);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("https://proj.supabase.co/rest/v1/push_subscriptions?on_conflict=endpoint");
+    expect(url).toBe(
+      "https://proj.supabase.co/rest/v1/push_subscriptions?on_conflict=endpoint&select=endpoint",
+    );
     expect(init?.method).toBe("POST");
     const headers = init?.headers as Record<string, string>;
     expect(headers["apikey"]).toBe("sb_secret_test");
-    expect(headers["Prefer"]).toContain("resolution=merge-duplicates");
-    expect(JSON.parse(String(init?.body))).toMatchObject({
+    expect(headers["Prefer"]).toContain("resolution=ignore-duplicates");
+    expect(JSON.parse(String(init?.body))).toEqual({
       endpoint: ENDPOINT,
       p256dh: "pub",
       auth: "sec",
     });
+  });
+
+  it("refreshes an existing subscription and reports it as not new", async () => {
+    const fetchMock = mockFetch((_url, init) =>
+      init.method === "POST"
+        ? Response.json([], { status: 201 })
+        : new Response(null, { status: 204 }),
+    );
+    await expect(store.save(record)).resolves.toBe(false);
+
+    const [url, init] = fetchMock.mock.calls[1]!;
+    expect(init?.method).toBe("PATCH");
+    expect(url).toBe(
+      `https://proj.supabase.co/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(ENDPOINT)}`,
+    );
+    expect(JSON.parse(String(init?.body))).toMatchObject({ p256dh: "pub", auth: "sec" });
   });
 
   it("deletes by exact, URL-encoded endpoint and reports whether a row was removed", async () => {

@@ -16,16 +16,25 @@ export class SupabaseSubscriptionStore implements SubscriptionStore {
   constructor(private readonly config: SupabaseConfig) {}
 
   async save(record: PushSubscriptionRecord) {
-    await supabaseRest(this.config, `${TABLE}?on_conflict=endpoint`, {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: {
-        endpoint: record.endpoint,
-        p256dh: record.keys.p256dh,
-        auth: record.keys.auth,
-        updated_at: new Date().toISOString(),
+    const keys = { p256dh: record.keys.p256dh, auth: record.keys.auth };
+    // Insert only if new: an existing endpoint comes back as an empty array.
+    const inserted = await supabaseRest<Row[]>(
+      this.config,
+      `${TABLE}?on_conflict=endpoint&select=endpoint`,
+      {
+        method: "POST",
+        headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
+        body: { endpoint: record.endpoint, ...keys },
       },
+    );
+    if (inserted?.length) return true;
+
+    await supabaseRest(this.config, `${TABLE}?endpoint=eq.${encodeURIComponent(record.endpoint)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: { ...keys, updated_at: new Date().toISOString() },
     });
+    return false;
   }
 
   async remove(endpoint: string) {

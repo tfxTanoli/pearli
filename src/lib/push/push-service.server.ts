@@ -79,7 +79,8 @@ export interface PushSubscriptionRecord {
 }
 
 export interface SubscriptionStore {
-  save(record: PushSubscriptionRecord): Promise<void>;
+  /** Stores or refreshes a subscription; resolves true if it was not stored before. */
+  save(record: PushSubscriptionRecord): Promise<boolean>;
   remove(endpoint: string): Promise<boolean>;
   list(): Promise<PushSubscriptionRecord[]>;
 }
@@ -93,7 +94,9 @@ export class MemorySubscriptionStore implements SubscriptionStore {
   private records = new Map<string, PushSubscriptionRecord>();
 
   async save(record: PushSubscriptionRecord) {
+    const created = !this.records.has(record.endpoint);
     this.records.set(record.endpoint, record);
+    return created;
   }
 
   async remove(endpoint: string) {

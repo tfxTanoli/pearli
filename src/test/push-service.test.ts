@@ -106,6 +106,15 @@ describe("sender authorization", () => {
   });
 });
 
+describe("MemorySubscriptionStore", () => {
+  it("reports whether a saved subscription is new", async () => {
+    const store = new MemorySubscriptionStore();
+    await expect(store.save(record("https://fcm.googleapis.com/fcm/send/a"))).resolves.toBe(true);
+    await expect(store.save(record("https://fcm.googleapis.com/fcm/send/a"))).resolves.toBe(false);
+    expect(await store.list()).toHaveLength(1);
+  });
+});
+
 describe("broadcastNotification", () => {
   let store: MemorySubscriptionStore;
 
