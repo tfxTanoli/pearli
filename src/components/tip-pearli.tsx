@@ -13,8 +13,28 @@ function formatGBP(value: number) {
   return `£${Number.isInteger(value) ? value : value.toFixed(2)}`;
 }
 
+/** Reads (and then clears) the ?tip=success&amount=… that Stripe Checkout returns with. */
+function useCheckoutReturn(): [number | null, () => void] {
+  const [paidAmount, setPaidAmount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("tip")) return;
+    if (url.searchParams.get("tip") === "success") {
+      const amount = Number.parseFloat(url.searchParams.get("amount") ?? "");
+      setPaidAmount(Number.isFinite(amount) && amount > 0 ? amount : 0);
+    }
+    url.searchParams.delete("tip");
+    url.searchParams.delete("amount");
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
+
+  return [paidAmount, () => setPaidAmount(null)];
+}
+
 export function TipPearli() {
   const [open, setOpen] = useState(false);
+  const [paidAmount, clearPaidAmount] = useCheckoutReturn();
 
   return (
     <>
@@ -26,15 +46,33 @@ export function TipPearli() {
         <Heart className="h-3.5 w-3.5" />
         Give a tip
       </button>
-      <TipModal open={open} onClose={() => setOpen(false)} />
+      <TipModal
+        open={open || paidAmount != null}
+        paidAmount={paidAmount}
+        onClose={() => {
+          setOpen(false);
+          clearPaidAmount();
+        }}
+      />
     </>
   );
 }
 
-function TipModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function TipModal({
+  open,
+  paidAmount,
+  onClose,
+}: {
+  open: boolean;
+  /** Set when returning from a completed Stripe Checkout (0 = amount unknown). */
+  paidAmount: number | null;
+  onClose: () => void;
+}) {
   const [selected, setSelected] = useState<string | null>(null);
   const [custom, setCustom] = useState("");
-  const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const done = paidAmount != null;
 
   useEffect(() => {
     if (!open) return;
@@ -65,7 +103,27 @@ function TipModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     onClose();
     setSelected(null);
     setCustom("");
-    setDone(false);
+    setSubmitting(false);
+    setError(null);
+  };
+
+  const startCheckout = async () => {
+    if (amount == null || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, returnPath: window.location.pathname }),
+      });
+      const body = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!response.ok || !body.url) throw new Error(body.error ?? "Could not start checkout");
+      window.location.assign(body.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start checkout");
+      setSubmitting(false);
+    }
   };
 
   // The header uses backdrop-filter, which would trap a position:fixed dialog
@@ -106,8 +164,7 @@ function TipModal({ open, onClose }: { open: boolean; onClose: () => void }) {
             </span>
             <h2 className="mt-5 font-display text-3xl">Thank you!</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Your {amount != null ? formatGBP(amount) : ""} tip to Pearli
-              means the world.
+              Your {paidAmount ? `${formatGBP(paidAmount)} ` : ""}tip to Pearli means the world.
             </p>
             <button
               type="button"
@@ -162,14 +219,22 @@ function TipModal({ open, onClose }: { open: boolean; onClose: () => void }) {
 
             <button
               type="button"
-              onClick={() => {
-                if (amount != null) setDone(true);
-              }}
-              disabled={amount == null}
+              onClick={startCheckout}
+              disabled={amount == null || submitting}
+              aria-busy={submitting}
               className="mt-5 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
             >
-              {amount != null ? `Tip ${formatGBP(amount)}` : "Select an amount"}
+              {submitting
+                ? "Opening secure checkout…"
+                : amount != null
+                  ? `Tip ${formatGBP(amount)}`
+                  : "Select an amount"}
             </button>
+            {error && (
+              <p role="alert" className="mt-3 text-center text-sm text-destructive">
+                {error}
+              </p>
+            )}
           </>
         )}
       </div>

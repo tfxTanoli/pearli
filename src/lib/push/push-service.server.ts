@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { getSupabaseConfig } from "@/lib/supabase.server";
+import { SupabaseSubscriptionStore } from "./supabase-subscription-store.server";
 import { base64UrlDecode, sendWebPush, type VapidConfig } from "./web-push.server";
 
 /**
@@ -83,9 +85,9 @@ export interface SubscriptionStore {
 }
 
 /**
- * In-memory store for local development and tests only. Records vanish on
- * restart and are not shared between server instances, so production must
- * swap in a persistent store via `setSubscriptionStore` (see README).
+ * In-memory fallback used when Supabase is not configured (tests, quick local
+ * runs). Records vanish on restart and are not shared between server
+ * instances, so production uses the Supabase store.
  */
 export class MemorySubscriptionStore implements SubscriptionStore {
   private records = new Map<string, PushSubscriptionRecord>();
@@ -109,7 +111,17 @@ const globalForPush = globalThis as typeof globalThis & {
 };
 
 export function getSubscriptionStore(): SubscriptionStore {
-  globalForPush.__pearliPushStore ??= new MemorySubscriptionStore();
+  if (!globalForPush.__pearliPushStore) {
+    const supabase = getSupabaseConfig();
+    if (!supabase && process.env["NODE_ENV"] === "production") {
+      console.warn(
+        "[push] SUPABASE_URL/SUPABASE_SECRET_KEY missing: subscriptions are in memory only",
+      );
+    }
+    globalForPush.__pearliPushStore = supabase
+      ? new SupabaseSubscriptionStore(supabase)
+      : new MemorySubscriptionStore();
+  }
   return globalForPush.__pearliPushStore;
 }
 

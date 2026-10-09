@@ -70,7 +70,42 @@ expired (404/410) are removed automatically.
 
 ### Subscription storage
 
-`src/lib/push/push-service.server.ts` ships with an **in-memory store for local
-development only**. It is lost on restart and not shared between server
-instances, so before production plug a persistent store into
-`setSubscriptionStore()` (any database implementing `save`, `remove`, `list`).
+Subscriptions are stored in the Supabase table `push_subscriptions` (see
+`supabase/migrations/`). If `SUPABASE_URL`/`SUPABASE_SECRET_KEY` are not set,
+an in-memory store is used instead, which is only suitable for tests.
+
+## Tips (Stripe Checkout)
+
+"Give a tip" opens the amount picker; confirming calls `POST /api/stripe/checkout`,
+which creates a Stripe Checkout Session (GBP, £1–£500) and redirects to Stripe.
+After paying, the visitor returns to the same page and sees the thank-you screen.
+
+Stripe then calls `POST /api/stripe/webhook`. The signature is verified with
+`STRIPE_WEBHOOK_SECRET`, and `checkout.session.completed`,
+`checkout.session.async_payment_succeeded` and
+`checkout.session.async_payment_failed` events for Pearli tips are recorded in
+the Supabase table `tips` (amount, currency, status, test/live mode; no customer
+details). Sessions created by other apps on the same Stripe account are ignored.
+
+In the Stripe Dashboard the webhook endpoint should send at least the three
+events above to `https://<your-site>/api/stripe/webhook`.
+
+Local webhook testing with the Stripe CLI:
+
+```sh
+stripe listen --forward-to localhost:<port>/api/stripe/webhook
+# put the whsec_ it prints into .env as STRIPE_WEBHOOK_SECRET, restart `npm run dev`
+stripe trigger checkout.session.completed
+```
+
+## Database (Supabase)
+
+Schema lives in `supabase/migrations/`. Both tables have row-level security
+enabled with no policies and no grants for `anon`/`authenticated`, so they are
+only reachable with the server-side secret key. Apply migrations with the
+Supabase CLI (`supabase db push`) or the SQL editor.
+
+## Environment variables
+
+See `.env.example`. Locally, `npm run dev` reads `.env`. In production they are
+set in Vercel (Project → Settings → Environment Variables).

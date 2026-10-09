@@ -17,6 +17,8 @@ import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as ApiPushConfigRouteImport } from './routes/api/push/config'
 import { Route as ApiPushSendRouteImport } from './routes/api/push/send'
 import { Route as ApiPushSubscribeRouteImport } from './routes/api/push/subscribe'
+import { Route as ApiStripeCheckoutRouteImport } from './routes/api/stripe/checkout'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +60,16 @@ const ApiPushSubscribeRoute = ApiPushSubscribeRouteImport.update({
   path: '/api/push/subscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripeCheckoutRoute = ApiStripeCheckoutRouteImport.update({
+  id: '/api/stripe/checkout',
+  path: '/api/stripe/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +80,8 @@ export interface FileRoutesByFullPath {
   '/api/push/config': typeof ApiPushConfigRoute
   '/api/push/send': typeof ApiPushSendRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
+  '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -77,6 +91,8 @@ export interface FileRoutesByTo {
   '/api/push/config': typeof ApiPushConfigRoute
   '/api/push/send': typeof ApiPushSendRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
+  '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -88,6 +104,8 @@ export interface FileRoutesById {
   '/api/push/config': typeof ApiPushConfigRoute
   '/api/push/send': typeof ApiPushSendRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
+  '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,6 +118,8 @@ export interface FileRouteTypes {
     | '/api/push/config'
     | '/api/push/send'
     | '/api/push/subscribe'
+    | '/api/stripe/checkout'
+    | '/api/stripe/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,6 +129,8 @@ export interface FileRouteTypes {
     | '/api/push/config'
     | '/api/push/send'
     | '/api/push/subscribe'
+    | '/api/stripe/checkout'
+    | '/api/stripe/webhook'
   id:
     | '__root__'
     | '/'
@@ -119,6 +141,8 @@ export interface FileRouteTypes {
     | '/api/push/config'
     | '/api/push/send'
     | '/api/push/subscribe'
+    | '/api/stripe/checkout'
+    | '/api/stripe/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -129,6 +153,8 @@ export interface RootRouteChildren {
   ApiPushConfigRoute: typeof ApiPushConfigRoute
   ApiPushSendRoute: typeof ApiPushSendRoute
   ApiPushSubscribeRoute: typeof ApiPushSubscribeRoute
+  ApiStripeCheckoutRoute: typeof ApiStripeCheckoutRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -189,6 +215,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPushSubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stripe/checkout': {
+      id: '/api/stripe/checkout'
+      path: '/api/stripe/checkout'
+      fullPath: '/api/stripe/checkout'
+      preLoaderRoute: typeof ApiStripeCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -210,6 +250,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPushConfigRoute: ApiPushConfigRoute,
   ApiPushSendRoute: ApiPushSendRoute,
   ApiPushSubscribeRoute: ApiPushSubscribeRoute,
+  ApiStripeCheckoutRoute: ApiStripeCheckoutRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
