@@ -76,13 +76,42 @@ describe("admin notifications page", () => {
     expect(sessionStorage.getItem("pearli-admin-token")).toBe(TOKEN);
   });
 
-  it("explains a password with characters that cannot be right, without calling the server", async () => {
-    await unlock(`abc${String.fromCodePoint(0x0430)}def${String.fromCodePoint(0x1f600)}`);
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "That password contains characters that don’t belong in it. Please copy it again, or type it in by hand.",
+  it("unlocks whatever unknown invisible characters a paste brings along", async () => {
+    // Direction isolates, an object-replacement character and a variation selector:
+    // none of these were on any list, and all must simply be dropped.
+    const junk = [0x2068, 0xfffc, 0xfe0f, 0x2069].map((c) => String.fromCodePoint(c));
+    await unlock(
+      junk[0] +
+        TOKEN.slice(0, 7) +
+        junk[1] +
+        TOKEN.slice(7, 20) +
+        junk[2] +
+        TOKEN.slice(20) +
+        junk[3],
     );
-    expect(fetchMock).not.toHaveBeenCalled();
+
+    expect(await screen.findByText("subscribers")).toBeInTheDocument();
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("says what was removed when a pasted password is still wrong", async () => {
+    await unlock(`wrong${String.fromCodePoint(0x0430)}pass${String.fromCodePoint(0x1f600)}`);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("That admin token isn’t right.");
+    expect(alert).toHaveTextContent(
+      "Some unusual characters were removed from what you entered (U+0430, U+1F600). If you pasted it, try typing it in by hand.",
+    );
+    // What was left over is still checked with the server, and never sent with odd characters.
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer wrongpass");
     expect(screen.queryByText("Type error")).toBeNull();
+  });
+
+  it("adds no hint for an ordinary wrong password", async () => {
+    await unlock("  wrong-token \n");
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("That admin token isn’t right.");
   });
 
   it("never shows a browser's raw error when the request fails", async () => {

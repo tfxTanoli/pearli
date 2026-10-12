@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { cleanAdminToken, isSendableToken } from "@/lib/admin-token";
+import { cleanAdminToken, unusualCharacters } from "@/lib/admin-token";
 import { NETWORK_ERROR_MESSAGE } from "@/lib/network-error";
 import { WELCOME_NOTIFICATION_URL } from "@/lib/push/welcome-destination";
 
@@ -58,6 +58,8 @@ interface Settings {
   storage?: { mode: "database" | "memory"; missing: string[]; present: string[] };
 }
 
+const WRONG_TOKEN_MESSAGE = "That admin token isn’t right.";
+
 class UnauthorizedError extends Error {}
 
 async function adminFetch<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {
@@ -75,7 +77,7 @@ async function adminFetch<T>(token: string, path: string, init: RequestInit = {}
     // differently ("Load failed", "Type error", "Failed to fetch"), so say it plainly.
     throw new Error(NETWORK_ERROR_MESSAGE);
   }
-  if (response.status === 401) throw new UnauthorizedError("That admin token isn’t right.");
+  if (response.status === 401) throw new UnauthorizedError(WRONG_TOKEN_MESSAGE);
   const body = (await response.json().catch(() => ({}))) as T & { error?: string };
   if (!response.ok) throw new Error(body.error ?? `Request failed (HTTP ${response.status})`);
   return body;
@@ -106,12 +108,13 @@ function AdminNotificationsPage() {
 
   const unlock = async (entered: string) => {
     const candidate = cleanAdminToken(entered);
-    if (!candidate) return;
-    if (!isSendableToken(candidate)) {
-      storeToken(null);
-      setError(
-        "That password contains characters that don’t belong in it. Please copy it again, or type it in by hand.",
-      );
+    // Named in the message if unlocking fails, so it is clear what a paste brought along.
+    const removed = unusualCharacters(entered);
+    const hint = removed.length
+      ? ` Some unusual characters were removed from what you entered (${removed.slice(0, 6).join(", ")}). If you pasted it, try typing it in by hand.`
+      : "";
+    if (!candidate) {
+      if (entered.trim()) setError(WRONG_TOKEN_MESSAGE + hint);
       return;
     }
     setChecking(true);
@@ -123,7 +126,8 @@ function AdminNotificationsPage() {
       setSettings(loaded);
     } catch (err) {
       storeToken(null);
-      setError(err instanceof Error ? err.message : "Could not load settings");
+      const message = err instanceof Error ? err.message : "Could not load settings";
+      setError(err instanceof UnauthorizedError ? message + hint : message);
     } finally {
       setChecking(false);
     }
