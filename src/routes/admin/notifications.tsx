@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { cleanAdminToken, isSendableToken } from "@/lib/admin-token";
+import { NETWORK_ERROR_MESSAGE } from "@/lib/network-error";
 import { WELCOME_NOTIFICATION_URL } from "@/lib/push/welcome-destination";
 
 export const Route = createFileRoute("/admin/notifications")({
@@ -59,13 +61,20 @@ interface Settings {
 class UnauthorizedError extends Error {}
 
 async function adminFetch<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
+      },
+    });
+  } catch {
+    // fetch only throws when the request never completed. Browsers word that
+    // differently ("Load failed", "Type error", "Failed to fetch"), so say it plainly.
+    throw new Error(NETWORK_ERROR_MESSAGE);
+  }
   if (response.status === 401) throw new UnauthorizedError("That admin token isn’t right.");
   const body = (await response.json().catch(() => ({}))) as T & { error?: string };
   if (!response.ok) throw new Error(body.error ?? `Request failed (HTTP ${response.status})`);
@@ -95,7 +104,16 @@ function AdminNotificationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
-  const unlock = async (candidate: string) => {
+  const unlock = async (entered: string) => {
+    const candidate = cleanAdminToken(entered);
+    if (!candidate) return;
+    if (!isSendableToken(candidate)) {
+      storeToken(null);
+      setError(
+        "That password contains characters that don’t belong in it. Please copy it again, or type it in by hand.",
+      );
+      return;
+    }
     setChecking(true);
     setError(null);
     try {

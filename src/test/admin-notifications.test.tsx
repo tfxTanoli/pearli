@@ -57,6 +57,44 @@ describe("admin notifications page", () => {
     expect(sessionStorage.getItem("pearli-admin-token")).toBeNull();
   });
 
+  it("unlocks when the password was pasted with invisible characters, a long dash and quotes", async () => {
+    // What a chat app can do to a copied password. Safari refuses to send such
+    // characters and reports only "Type error", so they are cleaned first.
+    const mangled =
+      String.fromCodePoint(0x201c) +
+      TOKEN.replace("-", String.fromCodePoint(0x2013)).slice(0, 12) +
+      String.fromCodePoint(0x200b) +
+      TOKEN.replace("-", String.fromCodePoint(0x2013)).slice(12) +
+      String.fromCodePoint(0x201d) +
+      " \n";
+    await unlock(mangled);
+
+    expect(await screen.findByText("subscribers")).toBeInTheDocument();
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe(`Bearer ${TOKEN}`);
+    // The cleaned password is what gets remembered for this tab.
+    expect(sessionStorage.getItem("pearli-admin-token")).toBe(TOKEN);
+  });
+
+  it("explains a password with characters that cannot be right, without calling the server", async () => {
+    await unlock(`abc${String.fromCodePoint(0x0430)}def${String.fromCodePoint(0x1f600)}`);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "That password contains characters that don’t belong in it. Please copy it again, or type it in by hand.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("Type error")).toBeNull();
+  });
+
+  it("never shows a browser's raw error when the request fails", async () => {
+    // Safari's wording for a failed request; Chrome says "Failed to fetch".
+    fetchMock.mockRejectedValue(new TypeError("Type error"));
+    await unlock();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Couldn’t reach the server. Check your connection and try again.",
+    );
+    expect(screen.queryByText("Type error")).toBeNull();
+  });
+
   it("unlocks with the right token and shows subscribers and the welcome message", async () => {
     await unlock();
     expect(await screen.findByText("subscribers")).toBeInTheDocument();

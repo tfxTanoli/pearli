@@ -127,6 +127,26 @@ describe('"Give a tip" button', () => {
     expect(screen.getByRole("button", { name: "Tip £7.50" })).toBeEnabled();
   });
 
+  it("never shows a browser's raw error when checkout cannot be reached", async () => {
+    // Safari reports a failed request as "Load failed" or "Type error".
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Type error");
+      }),
+    );
+    renderAt("/offers");
+    fireEvent.click(await screen.findByRole("button", { name: "Give a tip" }));
+    fireEvent.click(screen.getByRole("button", { name: "£5" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tip £5" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Couldn’t reach the server. Check your connection and try again.",
+    );
+    expect(screen.queryByText("Type error")).toBeNull();
+    expect(screen.getByRole("button", { name: "Tip £5" })).toBeEnabled();
+  });
+
   it("shows the thank-you screen after returning from a paid checkout", async () => {
     window.history.replaceState(null, "", "/blog?tip=success&amount=5");
 

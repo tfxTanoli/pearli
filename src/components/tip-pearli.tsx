@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Heart, X } from "lucide-react";
+import { NETWORK_ERROR_MESSAGE } from "@/lib/network-error";
 
 const TIP_PRESETS = [
   { id: "1", label: "£1", value: 1 },
@@ -121,7 +122,15 @@ function TipModal({
       if (!response.ok || !body.url) throw new Error(body.error ?? "Could not start checkout");
       window.location.assign(body.url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start checkout");
+      // A TypeError here means the request never reached the server; browsers
+      // word it differently ("Load failed", "Type error"), so say it plainly.
+      setError(
+        err instanceof TypeError
+          ? NETWORK_ERROR_MESSAGE
+          : err instanceof Error
+            ? err.message
+            : "Could not start checkout",
+      );
       setSubmitting(false);
     }
   };
