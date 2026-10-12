@@ -80,6 +80,20 @@ describe("notification validation", () => {
   );
 });
 
+describe("notification validation: welcome marker", () => {
+  it("strips a welcome marker, so a broadcast can never act as the welcome", () => {
+    const parsed = notificationSchema.parse({ title: "Hi", url: "/offers", welcome: true });
+    expect(parsed).toEqual({ title: "Hi", body: "", url: "/offers" });
+    expect("welcome" in parsed).toBe(false);
+  });
+
+  it("still rejects the welcome's external URL for broadcasts", () => {
+    expect(
+      notificationSchema.safeParse({ title: "Hi", url: "https://efficient.app/deals" }).success,
+    ).toBe(false);
+  });
+});
+
 describe("sender authorization", () => {
   const req = (auth?: string) =>
     new Request("http://localhost/api/push/send", {

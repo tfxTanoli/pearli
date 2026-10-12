@@ -72,9 +72,6 @@ describe("admin notifications page", () => {
     fireEvent.change(within(welcome).getByLabelText(/^Title/), {
       target: { value: "Hello from Miva" },
     });
-    fireEvent.change(within(welcome).getByLabelText("Opens when tapped"), {
-      target: { value: "/offers" },
-    });
     fireEvent.click(within(welcome).getByRole("button", { name: "Save welcome notification" }));
 
     expect(await within(welcome).findByRole("status")).toHaveTextContent("Saved.");
@@ -83,8 +80,25 @@ describe("admin notifications page", () => {
       enabled: true,
       title: "Hello from Miva",
       body: "You’re subscribed.",
-      url: "/offers",
+      url: "/",
     });
+  });
+
+  it("shows the welcome's fixed external destination instead of a page picker", async () => {
+    await unlock();
+    const welcome = await screen.findByRole("form", { name: "Welcome notification" });
+    expect(within(welcome).getByText("https://efficient.app/deals")).toBeInTheDocument();
+    expect(within(welcome).queryByRole("combobox")).toBeNull();
+
+    // Ordinary notifications keep their Pearli page picker, with no external option.
+    const send = screen.getByRole("form", { name: "Send a notification" });
+    const picker = within(send).getByLabelText("Opens when tapped");
+    expect(
+      within(picker)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Home", "Offers", "Founder’s note", "Blog", "Another page…"]);
+    expect(within(send).queryByText("https://efficient.app/deals")).toBeNull();
   });
 
   it("sends a notification to everyone after confirmation and reports the result", async () => {

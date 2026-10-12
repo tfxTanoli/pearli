@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { WELCOME_NOTIFICATION_URL } from "@/lib/push/welcome-destination";
 
 export const Route = createFileRoute("/admin/notifications")({
   head: () => ({
@@ -248,7 +249,11 @@ function WelcomeCard({
         />
         Send a welcome notification
       </label>
-      <MessageFields value={welcome} onChange={(m) => setWelcome({ ...welcome, ...m })} />
+      <MessageFields
+        value={welcome}
+        onChange={(m) => setWelcome({ ...welcome, ...m })}
+        fixedDestination={WELCOME_NOTIFICATION_URL}
+      />
       <StatusLine status={status} />
       <button
         type="submit"
@@ -328,7 +333,16 @@ function SendCard({
   );
 }
 
-function MessageFields({ value, onChange }: { value: Message; onChange: (m: Message) => void }) {
+function MessageFields({
+  value,
+  onChange,
+  fixedDestination,
+}: {
+  value: Message;
+  onChange: (m: Message) => void;
+  /** Set when the click destination is not editable (the welcome notification). */
+  fixedDestination?: string;
+}) {
   const isKnownPage = PAGES.some((p) => p.path === value.url);
   const [custom, setCustom] = useState(!isKnownPage);
 
@@ -352,25 +366,34 @@ function MessageFields({ value, onChange }: { value: Message; onChange: (m: Mess
           className={`${inputClass} resize-none`}
         />
       </Field>
-      <Field label="Opens when tapped">
-        <select
-          value={custom ? "other" : value.url}
-          onChange={(e) => {
-            const next = e.target.value;
-            setCustom(next === "other");
-            if (next !== "other") onChange({ ...value, url: next });
-          }}
-          className={inputClass}
-        >
-          {PAGES.map((p) => (
-            <option key={p.path} value={p.path}>
-              {p.label}
-            </option>
-          ))}
-          <option value="other">Another page…</option>
-        </select>
-      </Field>
-      {custom && (
+      {fixedDestination ? (
+        <div>
+          <span className="text-sm font-medium">Opens when tapped</span>
+          <p className="mt-1.5 break-all rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-muted-foreground">
+            {fixedDestination}
+          </p>
+        </div>
+      ) : (
+        <Field label="Opens when tapped">
+          <select
+            value={custom ? "other" : value.url}
+            onChange={(e) => {
+              const next = e.target.value;
+              setCustom(next === "other");
+              if (next !== "other") onChange({ ...value, url: next });
+            }}
+            className={inputClass}
+          >
+            {PAGES.map((p) => (
+              <option key={p.path} value={p.path}>
+                {p.label}
+              </option>
+            ))}
+            <option value="other">Another page…</option>
+          </select>
+        </Field>
+      )}
+      {!fixedDestination && custom && (
         <Field label="Page path" hint="e.g. /blog/my-post">
           <input
             required

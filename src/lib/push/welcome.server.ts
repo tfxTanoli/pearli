@@ -67,6 +67,17 @@ export async function saveWelcomeSettings(settings: WelcomeSettings): Promise<vo
   });
 }
 
+/**
+ * Push payload for the welcome notification. `welcome: true` is what marks it
+ * for the service worker, which then opens WELCOME_NOTIFICATION_URL on click.
+ * Broadcasts are built from `notificationSchema`, which drops unknown fields,
+ * so no other notification can carry the marker. `url` stays as the on-site
+ * fallback for a browser still running a service worker from before the marker.
+ */
+export function welcomePayload({ title, body, url }: WelcomeSettings): string {
+  return JSON.stringify({ title, body, url, welcome: true });
+}
+
 export type WelcomeOutcome = "sent" | "disabled" | "not-configured" | "gone" | "failed";
 
 /**
@@ -83,8 +94,7 @@ export async function welcomeNewSubscriber(
     const welcome = await getWelcomeSettings();
     if (!welcome.enabled) return "disabled";
 
-    const { title, body, url } = welcome;
-    const result = await sendWebPush(target, JSON.stringify({ title, body, url }), vapid);
+    const result = await sendWebPush(target, welcomePayload(welcome), vapid);
     if (result.gone) {
       await store.remove(target.endpoint);
       return "gone";

@@ -6,6 +6,11 @@
 
 const DEFAULT_ICON = "/icon-256.png";
 
+// The welcome notification is the only one that opens an external site, and
+// this is the only external URL a notification click can ever open.
+// Keep in sync with src/lib/push/welcome-destination.ts.
+const WELCOME_URL = "https://efficient.app/deals";
+
 self.addEventListener("install", () => {
   self.skipWaiting();
 });
@@ -17,6 +22,11 @@ self.addEventListener("activate", (event) => {
 /** Only same-origin paths may be opened from a notification. */
 function safePath(url) {
   return typeof url === "string" && url.startsWith("/") && !url.startsWith("//") ? url : "/";
+}
+
+/** Full URL a clicked notification opens: the welcome URL, or a page on this site. */
+function clickTarget(url) {
+  return url === WELCOME_URL ? WELCOME_URL : new URL(safePath(url), self.location.origin).href;
 }
 
 self.addEventListener("push", (event) => {
@@ -33,17 +43,16 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(data.title || "Pearli", {
       body: data.body || "",
       icon: DEFAULT_ICON,
-      data: { url: safePath(data.url) },
+      // Only a push the server marked as the welcome gets the external URL;
+      // an external URL sent any other way falls back to the home page.
+      data: { url: data.welcome === true ? WELCOME_URL : safePath(data.url) },
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = new URL(
-    safePath(event.notification.data && event.notification.data.url),
-    self.location.origin,
-  ).href;
+  const target = clickTarget(event.notification.data && event.notification.data.url);
 
   event.waitUntil(
     (async () => {

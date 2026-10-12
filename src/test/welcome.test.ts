@@ -6,6 +6,7 @@ import {
   getWelcomeSettings,
   saveWelcomeSettings,
   welcomeNewSubscriber,
+  welcomePayload,
   welcomeSettingsSchema,
 } from "@/lib/push/welcome.server";
 
@@ -117,6 +118,23 @@ describe("welcomeNewSubscriber", () => {
     await expect(welcomeNewSubscriber(TARGET, new MemorySubscriptionStore())).resolves.toBe(
       "failed",
     );
+  });
+});
+
+describe("welcomePayload", () => {
+  it("marks the push as the welcome and keeps its text and on-site fallback", () => {
+    expect(
+      JSON.parse(welcomePayload({ enabled: true, title: "Hi", body: "Thanks", url: "/offers" })),
+    ).toEqual({
+      title: "Hi",
+      body: "Thanks",
+      url: "/offers",
+      welcome: true,
+    });
+  });
+
+  it("does not put the external URL (or any setting-controlled link) in the payload", () => {
+    expect(welcomePayload(DEFAULT_WELCOME)).not.toContain("http");
   });
 });
 

@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { WELCOME_NOTIFICATION_URL } from "@/lib/push/welcome-destination";
 
 // Runs the real public/sw.js against a fake ServiceWorkerGlobalScope.
 const source = readFileSync(path.resolve(__dirname, "../../public/sw.js"), "utf8");
@@ -107,6 +108,99 @@ describe("service worker", () => {
 
   it("opens the home page for a notification without a destination", async () => {
     await sw.fire("notificationclick", { notification: { close: vi.fn(), data: null } });
+    expect(sw.self.clients.openWindow).toHaveBeenCalledWith(`${ORIGIN}/`);
+  });
+});
+
+describe("service worker: welcome notification", () => {
+  let sw: ReturnType<typeof loadServiceWorker>;
+  beforeEach(() => {
+    sw = loadServiceWorker();
+  });
+
+  const welcomePush = {
+    title: "Welcome to Pearli",
+    body: "You’re subscribed.",
+    url: "/",
+    welcome: true,
+  };
+  const lastNotificationData = () =>
+    (sw.self.registration.showNotification.mock.calls.at(-1) as unknown[])[1] as {
+      data: { url: string };
+    };
+
+  it("uses the same external URL as the shared constant", () => {
+    expect(WELCOME_NOTIFICATION_URL).toBe("https://efficient.app/deals");
+    expect(source).toContain(`const WELCOME_URL = "${WELCOME_NOTIFICATION_URL}";`);
+  });
+
+  it("shows the welcome normally and only stores its destination (no navigation on receipt)", async () => {
+    await sw.fire("push", { data: pushData(welcomePush) });
+
+    expect(sw.self.registration.showNotification).toHaveBeenCalledWith("Welcome to Pearli", {
+      body: "You’re subscribed.",
+      icon: "/icon-256.png",
+      data: { url: WELCOME_NOTIFICATION_URL },
+    });
+    // Receiving the push must not open or focus anything.
+    expect(sw.self.clients.openWindow).not.toHaveBeenCalled();
+    expect(sw.self.clients.matchAll).not.toHaveBeenCalled();
+  });
+
+  it("opens the external URL when the welcome notification is clicked", async () => {
+    await sw.fire("push", { data: pushData(welcomePush) });
+    const close = vi.fn();
+    await sw.fire("notificationclick", {
+      notification: { close, data: lastNotificationData().data },
+    });
+
+    expect(close).toHaveBeenCalled();
+    expect(sw.self.clients.openWindow).toHaveBeenCalledOnce();
+    expect(sw.self.clients.openWindow).toHaveBeenCalledWith("https://efficient.app/deals");
+  });
+
+  it("opens the external site even when Pearli tabs are already open", async () => {
+    const focus = vi.fn();
+    sw = loadServiceWorker([{ url: `${ORIGIN}/`, focus }]);
+    await sw.fire("notificationclick", {
+      notification: { close: vi.fn(), data: { url: WELCOME_NOTIFICATION_URL } },
+    });
+    expect(focus).not.toHaveBeenCalled();
+    expect(sw.self.clients.openWindow).toHaveBeenCalledWith(WELCOME_NOTIFICATION_URL);
+  });
+
+  it.each([
+    ["no marker", { title: "x", url: WELCOME_NOTIFICATION_URL }],
+    ["marker false", { title: "x", url: WELCOME_NOTIFICATION_URL, welcome: false }],
+    ["marker as a string", { title: "x", url: WELCOME_NOTIFICATION_URL, welcome: "true" }],
+    ["marker as a number", { title: "x", url: "/offers", welcome: 1 }],
+  ])("does not treat a push with %s as the welcome", async (_label, payload) => {
+    await sw.fire("push", { data: pushData(payload) });
+    const { data } = lastNotificationData();
+    expect(data.url).not.toBe(WELCOME_NOTIFICATION_URL);
+    expect(data.url.startsWith("/")).toBe(true);
+  });
+
+  it("keeps other notifications on their own Pearli page", async () => {
+    await sw.fire("push", {
+      data: pushData({ title: "New offer", body: "Take a look", url: "/offers" }),
+    });
+    expect(lastNotificationData().data).toEqual({ url: "/offers" });
+    await sw.fire("notificationclick", {
+      notification: { close: vi.fn(), data: lastNotificationData().data },
+    });
+    expect(sw.self.clients.openWindow).toHaveBeenCalledWith(`${ORIGIN}/offers`);
+  });
+
+  it.each([
+    "https://efficient.app/deals/",
+    "https://efficient.app/deals?x=1",
+    "https://efficient.app/other",
+    "https://efficient.app.evil.example/deals",
+    "http://efficient.app/deals",
+    "https://evil.example",
+  ])("never opens any other external URL on click (%s)", async (url) => {
+    await sw.fire("notificationclick", { notification: { close: vi.fn(), data: { url } } });
     expect(sw.self.clients.openWindow).toHaveBeenCalledWith(`${ORIGIN}/`);
   });
 });
