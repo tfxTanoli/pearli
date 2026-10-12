@@ -36,6 +36,7 @@ describe("SupabaseSubscriptionStore", () => {
     expect(init?.method).toBe("POST");
     const headers = init?.headers as Record<string, string>;
     expect(headers["apikey"]).toBe("sb_secret_test");
+    expect(headers["Authorization"]).toBe("Bearer sb_secret_test");
     expect(headers["Prefer"]).toContain("resolution=ignore-duplicates");
     expect(JSON.parse(String(init?.body))).toEqual({
       endpoint: ENDPOINT,

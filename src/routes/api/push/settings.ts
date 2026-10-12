@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSubscriptionStore, isAuthorizedSender } from "@/lib/push/push-service.server";
-import { getStorageStatus } from "@/lib/supabase.server";
+import { getStorageStatus, SupabaseError } from "@/lib/supabase.server";
 import {
   getWelcomeSettings,
   saveWelcomeSettings,
@@ -8,6 +8,20 @@ import {
 } from "@/lib/push/welcome.server";
 
 const unauthorized = () => Response.json({ error: "Unauthorized" }, { status: 401 });
+
+/**
+ * Turns a database failure into a readable message for the admin (for example
+ * a missing table), instead of a bare 500. Only reached after admin auth.
+ */
+async function withDatabaseErrors(handler: () => Promise<Response>): Promise<Response> {
+  try {
+    return await handler();
+  } catch (error) {
+    if (!(error instanceof SupabaseError)) throw error;
+    console.error("[push] database request failed", error);
+    return Response.json({ error: `Database error: ${error.message}` }, { status: 503 });
+  }
+}
 
 /**
  * Admin-only (Authorization: Bearer <PUSH_ADMIN_TOKEN>), used by /admin/notifications.
@@ -19,14 +33,16 @@ export const Route = createFileRoute("/api/push/settings")({
     handlers: {
       GET: async ({ request }) => {
         if (!isAuthorizedSender(request)) return unauthorized();
-        const [subscriptions, welcome] = await Promise.all([
-          getSubscriptionStore().list(),
-          getWelcomeSettings(),
-        ]);
-        return Response.json(
-          { subscribers: subscriptions.length, welcome, storage: getStorageStatus() },
-          { headers: { "Cache-Control": "no-store" } },
-        );
+        return withDatabaseErrors(async () => {
+          const [subscriptions, welcome] = await Promise.all([
+            getSubscriptionStore().list(),
+            getWelcomeSettings(),
+          ]);
+          return Response.json(
+            { subscribers: subscriptions.length, welcome, storage: getStorageStatus() },
+            { headers: { "Cache-Control": "no-store" } },
+          );
+        });
       },
       PUT: async ({ request }) => {
         if (!isAuthorizedSender(request)) return unauthorized();
@@ -43,8 +59,10 @@ export const Route = createFileRoute("/api/push/settings")({
             { status: 400 },
           );
         }
-        await saveWelcomeSettings(parsed.data);
-        return Response.json({ welcome: parsed.data });
+        return withDatabaseErrors(async () => {
+          await saveWelcomeSettings(parsed.data);
+          return Response.json({ welcome: parsed.data });
+        });
       },
     },
   },
