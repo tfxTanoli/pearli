@@ -35,6 +35,7 @@ interface Welcome extends Message {
 interface Settings {
   subscribers: number;
   welcome: Welcome;
+  storage?: { mode: "database" | "memory"; missing: string[]; present: string[] };
 }
 
 class UnauthorizedError extends Error {}
@@ -124,6 +125,7 @@ function AdminNotificationsPage() {
 
         {token && settings ? (
           <>
+            {settings.storage?.mode === "memory" && <StorageWarning storage={settings.storage} />}
             <p className="mt-6 rounded-3xl border border-border bg-card px-5 py-4 text-sm shadow-card">
               <span className="font-display text-2xl">{settings.subscribers}</span>{" "}
               <span className="text-muted-foreground">
@@ -147,6 +149,29 @@ function AdminNotificationsPage() {
           <UnlockForm busy={checking} error={error} onSubmit={unlock} />
         )}
       </main>
+    </div>
+  );
+}
+
+/** Shown when the server has no database: nothing on this page would be saved for good. */
+function StorageWarning({ storage }: { storage: NonNullable<Settings["storage"]> }) {
+  return (
+    <div
+      role="alert"
+      className="mt-6 rounded-3xl border border-destructive/40 bg-destructive/10 px-5 py-4 text-sm"
+    >
+      <p className="font-semibold text-destructive">Not connected to the database</p>
+      <p className="mt-1 leading-relaxed text-muted-foreground">
+        Subscribers and changes made here are not being saved permanently, so the numbers on this
+        page can change by themselves. Please contact your developer.
+      </p>
+      <p className="mt-2 break-words text-xs leading-relaxed text-muted-foreground">
+        Missing server setting{storage.missing.length === 1 ? "" : "s"}:{" "}
+        {storage.missing.join(", ")}.
+        {storage.present.length > 0
+          ? ` Supabase settings the server can see: ${storage.present.join(", ")}.`
+          : " The server cannot see any Supabase settings."}
+      </p>
     </div>
   );
 }

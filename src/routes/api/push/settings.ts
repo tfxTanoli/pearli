@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSubscriptionStore, isAuthorizedSender } from "@/lib/push/push-service.server";
+import { getStorageStatus } from "@/lib/supabase.server";
 import {
   getWelcomeSettings,
   saveWelcomeSettings,
@@ -10,7 +11,7 @@ const unauthorized = () => Response.json({ error: "Unauthorized" }, { status: 40
 
 /**
  * Admin-only (Authorization: Bearer <PUSH_ADMIN_TOKEN>), used by /admin/notifications.
- * GET — subscriber count and welcome notification settings.
+ * GET — subscriber count, welcome notification settings and storage status.
  * PUT — update the welcome notification.
  */
 export const Route = createFileRoute("/api/push/settings")({
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/api/push/settings")({
           getWelcomeSettings(),
         ]);
         return Response.json(
-          { subscribers: subscriptions.length, welcome },
+          { subscribers: subscriptions.length, welcome, storage: getStorageStatus() },
           { headers: { "Cache-Control": "no-store" } },
         );
       },

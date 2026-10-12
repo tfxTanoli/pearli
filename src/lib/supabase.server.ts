@@ -11,11 +11,32 @@ export interface SupabaseConfig {
   secretKey: string;
 }
 
+const REQUIRED_SETTINGS = ["SUPABASE_URL", "SUPABASE_SECRET_KEY"] as const;
+
 export function getSupabaseConfig(): SupabaseConfig | null {
-  const url = process.env["SUPABASE_URL"];
-  const secretKey = process.env["SUPABASE_SECRET_KEY"];
+  // Trimmed: a value pasted with a stray space or line break would otherwise break requests.
+  const url = process.env["SUPABASE_URL"]?.trim();
+  const secretKey = process.env["SUPABASE_SECRET_KEY"]?.trim();
   if (!url || !secretKey) return null;
   return { url: url.replace(/\/+$/, ""), secretKey };
+}
+
+export interface StorageStatus {
+  /** "memory" means Supabase is not configured: nothing is saved permanently. */
+  mode: "database" | "memory";
+  /** Required settings that are absent or empty on the server. */
+  missing: string[];
+  /** Names (never values) of Supabase-related settings the server can see, to spot a misnamed one. */
+  present: string[];
+}
+
+/** Whether the server can reach its database, for the admin page to warn when it cannot. */
+export function getStorageStatus(): StorageStatus {
+  const missing = REQUIRED_SETTINGS.filter((name) => !process.env[name]?.trim());
+  const present = Object.keys(process.env)
+    .filter((name) => /supabase/i.test(name))
+    .sort();
+  return { mode: missing.length ? "memory" : "database", missing, present };
 }
 
 export class SupabaseError extends Error {

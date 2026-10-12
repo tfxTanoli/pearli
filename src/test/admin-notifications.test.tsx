@@ -14,15 +14,17 @@ const WELCOME = {
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
+let storage: { mode: "database" | "memory"; missing: string[]; present: string[] };
 
 beforeEach(() => {
   sessionStorage.clear();
+  storage = { mode: "database", missing: [], present: ["SUPABASE_SECRET_KEY", "SUPABASE_URL"] };
   fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
     const auth = (init.headers as Record<string, string>)["Authorization"];
     if (auth !== `Bearer ${TOKEN}`)
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     if (url === "/api/push/settings" && (init.method ?? "GET") === "GET") {
-      return Response.json({ subscribers: 3, welcome: WELCOME });
+      return Response.json({ subscribers: 3, welcome: WELCOME, storage });
     }
     if (url === "/api/push/settings" && init.method === "PUT") {
       return Response.json({ welcome: JSON.parse(String(init.body)) });
@@ -139,6 +141,27 @@ describe("admin notifications page", () => {
     fireEvent.change(within(form).getByLabelText(/^Title/), { target: { value: "Oops" } });
     fireEvent.click(within(form).getByRole("button", { name: "Send to all subscribers" }));
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/push/send")).toBe(false);
+  });
+
+  it("shows no storage warning when the database is connected", async () => {
+    await unlock();
+    await screen.findByText("subscribers");
+    expect(screen.queryByText("Not connected to the database")).toBeNull();
+  });
+
+  it("warns clearly when the server has no database, naming what is missing", async () => {
+    storage = {
+      mode: "memory",
+      missing: ["SUPABASE_SECRET_KEY"],
+      present: ["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"],
+    };
+    await unlock();
+    const warning = await screen.findByRole("alert");
+    expect(warning).toHaveTextContent("Not connected to the database");
+    expect(warning).toHaveTextContent("Missing server setting: SUPABASE_SECRET_KEY.");
+    expect(warning).toHaveTextContent(
+      "Supabase settings the server can see: SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL.",
+    );
   });
 
   it("locks again and forgets the token", async () => {
