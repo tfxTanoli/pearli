@@ -28,6 +28,24 @@ interface Message {
   url: string;
 }
 
+/** How the "Opens when tapped" link is being chosen. */
+type LinkMode = "page" | "other" | "external";
+
+function linkModeFor(url: string): LinkMode {
+  if (PAGES.some((p) => p.path === url)) return "page";
+  return /^https:\/\//i.test(url) ? "external" : "other";
+}
+
+/** Host name of an external https link, or null for a page on this site. */
+function externalHost(url: string): string | null {
+  if (!/^https:\/\//i.test(url)) return null;
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
+
 interface Welcome extends Message {
   enabled: boolean;
 }
@@ -311,7 +329,9 @@ function SendCard({
   const send = async (e: FormEvent) => {
     e.preventDefault();
     const who = subscribers === 1 ? "1 subscriber" : `${subscribers} subscribers`;
-    if (!window.confirm(`Send “${message.title}” to ${who} now?`)) return;
+    const host = externalHost(message.url.trim());
+    const opens = host ? `\n\nTapping it will open ${host}.` : "";
+    if (!window.confirm(`Send “${message.title}” to ${who} now?${opens}`)) return;
     setBusy(true);
     setStatus(null);
     try {
@@ -368,8 +388,7 @@ function MessageFields({
   /** Set when the click destination is not editable (the welcome notification). */
   fixedDestination?: string;
 }) {
-  const isKnownPage = PAGES.some((p) => p.path === value.url);
-  const [custom, setCustom] = useState(!isKnownPage);
+  const [mode, setMode] = useState<LinkMode>(() => linkModeFor(value.url));
 
   return (
     <div className="mt-4 space-y-3">
@@ -401,11 +420,20 @@ function MessageFields({
       ) : (
         <Field label="Opens when tapped">
           <select
-            value={custom ? "other" : value.url}
+            value={mode === "page" ? value.url : mode}
             onChange={(e) => {
               const next = e.target.value;
-              setCustom(next === "other");
-              if (next !== "other") onChange({ ...value, url: next });
+              if (next === "other") {
+                setMode("other");
+                // Keep a page path that is already there; an external link is not a path.
+                if (!value.url.startsWith("/")) onChange({ ...value, url: "/" });
+              } else if (next === "external") {
+                setMode("external");
+                onChange({ ...value, url: "" });
+              } else {
+                setMode("page");
+                onChange({ ...value, url: next });
+              }
             }}
             className={inputClass}
           >
@@ -415,14 +443,34 @@ function MessageFields({
               </option>
             ))}
             <option value="other">Another page…</option>
+            <option value="external">External website…</option>
           </select>
         </Field>
       )}
-      {!fixedDestination && custom && (
+      {!fixedDestination && mode === "other" && (
         <Field label="Page path" hint="e.g. /blog/my-post">
           <input
             required
             pattern="/(?!/).*"
+            value={value.url}
+            onChange={(e) => onChange({ ...value, url: e.target.value })}
+            className={inputClass}
+          />
+        </Field>
+      )}
+      {!fixedDestination && mode === "external" && (
+        <Field label="Website address" hint="must start with https://">
+          <input
+            required
+            type="url"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            pattern="https://.+"
+            title="Enter the full address, starting with https://"
+            maxLength={1000}
+            placeholder="https://example.com/page"
             value={value.url}
             onChange={(e) => onChange({ ...value, url: e.target.value })}
             className={inputClass}

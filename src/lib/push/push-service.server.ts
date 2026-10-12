@@ -58,16 +58,58 @@ export const unsubscribeSchema = z.object({
   endpoint: z.string().max(2048),
 });
 
-/** A notification to broadcast. `url` must be a same-origin path. */
-export const notificationSchema = z.object({
+/** True for a page on this site, e.g. "/offers". */
+export function isSitePath(url: string): boolean {
+  return url.startsWith("/") && !url.startsWith("//") && !url.includes("\\");
+}
+
+/**
+ * True for an external link a notification may open: a full https:// address
+ * with a real host name and no embedded username or password. The service
+ * worker (public/sw.js) applies the same rule before opening one.
+ */
+export function isExternalLink(url: string): boolean {
+  if (!/^https:\/\//i.test(url)) return false;
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "https:" &&
+      !parsed.username &&
+      !parsed.password &&
+      parsed.hostname.includes(".")
+    );
+  } catch {
+    return false;
+  }
+}
+
+const messageText = {
   title: z.string().trim().min(1).max(100),
   body: z.string().trim().max(300).default(""),
+};
+
+/**
+ * A notification to broadcast. `url` is where a click goes: a page on this
+ * site, or an external https:// link chosen by the admin.
+ */
+export const notificationSchema = z.object({
+  ...messageText,
   url: z
     .string()
+    .trim()
+    .max(1000)
     .default("/")
-    .refine((u) => u.startsWith("/") && !u.startsWith("//") && !u.includes("\\"), {
-      message: "url must be a path on this site, e.g. /offers",
+    .refine((u) => isSitePath(u) || isExternalLink(u), {
+      message: "Link must be a page on this site (e.g. /offers) or a full https:// address",
     }),
+});
+
+/** A notification whose `url` must stay on this site (the welcome notification's settings). */
+export const sitePageNotificationSchema = z.object({
+  ...messageText,
+  url: z.string().default("/").refine(isSitePath, {
+    message: "url must be a path on this site, e.g. /offers",
+  }),
 });
 
 export type NotificationMessage = z.infer<typeof notificationSchema>;

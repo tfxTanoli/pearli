@@ -145,6 +145,15 @@ describe("welcome settings", () => {
     expect(DEFAULT_WELCOME.body.toLowerCase()).not.toContain("discount");
   });
 
+  it("still only stores a Pearli page for the welcome (external links are for broadcasts)", () => {
+    for (const url of ["https://example.com", "https://efficient.app/deals", "//evil.example"]) {
+      expect(welcomeSettingsSchema.safeParse({ ...DEFAULT_WELCOME, url }).success).toBe(false);
+    }
+    expect(welcomeSettingsSchema.safeParse({ ...DEFAULT_WELCOME, url: "/offers" }).success).toBe(
+      true,
+    );
+  });
+
   it("validates like any notification (title required, on-site link only)", () => {
     expect(welcomeSettingsSchema.safeParse({ ...DEFAULT_WELCOME, title: " " }).success).toBe(false);
     expect(

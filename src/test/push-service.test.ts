@@ -4,6 +4,7 @@ import {
   broadcastNotification,
   isAuthorizedSender,
   MemorySubscriptionStore,
+  isExternalLink,
   notificationSchema,
   pushSubscriptionSchema,
 } from "@/lib/push/push-service.server";
@@ -72,12 +73,49 @@ describe("notification validation", () => {
     expect(notificationSchema.parse({ title: "Hi" })).toEqual({ title: "Hi", body: "", url: "/" });
   });
 
-  it.each(["https://evil.example", "//evil.example", "javascript:alert(1)", "/\\evil.example"])(
-    "rejects off-site click destination %s",
-    (url) => {
-      expect(notificationSchema.safeParse({ title: "Hi", url }).success).toBe(false);
-    },
-  );
+  it.each(["/", "/offers", "/blog/my-post?ref=push#top"])("accepts the Pearli page %s", (url) => {
+    expect(notificationSchema.parse({ title: "Hi", url }).url).toBe(url);
+  });
+
+  it.each([
+    "https://efficient.app/deals",
+    "https://www.audiowallet.co.uk",
+    "https://example.com/path?x=1&y=2#section",
+    "HTTPS://Example.com/Deals",
+  ])("accepts the external https link %s", (url) => {
+    expect(notificationSchema.parse({ title: "Hi", url }).url).toBe(url);
+    expect(isExternalLink(url)).toBe(true);
+  });
+
+  it("trims spaces pasted around a link", () => {
+    expect(notificationSchema.parse({ title: "Hi", url: "  https://example.com/x  " }).url).toBe(
+      "https://example.com/x",
+    );
+  });
+
+  it.each([
+    ["plain http", "http://example.com"],
+    ["protocol-relative", "//evil.example"],
+    ["javascript:", "javascript:alert(1)"],
+    ["data:", "data:text/html,<script>alert(1)</script>"],
+    ["backslash trick", "/\\evil.example"],
+    ["embedded credentials", "https://user:pass@example.com"],
+    ["no real host name", "https://localhost/admin"],
+    ["bare domain without https", "example.com"],
+    ["ftp", "ftp://example.com/file"],
+    ["empty", ""],
+    ["over 1000 characters", `https://example.com/${"a".repeat(1000)}`],
+  ])("rejects an unsafe or malformed link: %s", (_label, url) => {
+    const result = notificationSchema.safeParse({ title: "Hi", url });
+    expect(result.success).toBe(false);
+  });
+
+  it("explains what a valid link looks like", () => {
+    const result = notificationSchema.safeParse({ title: "Hi", url: "example.com" });
+    expect(result.success ? "" : result.error.issues[0]?.message).toBe(
+      "Link must be a page on this site (e.g. /offers) or a full https:// address",
+    );
+  });
 });
 
 describe("notification validation: welcome marker", () => {
@@ -87,10 +125,13 @@ describe("notification validation: welcome marker", () => {
     expect("welcome" in parsed).toBe(false);
   });
 
-  it("still rejects the welcome's external URL for broadcasts", () => {
-    expect(
-      notificationSchema.safeParse({ title: "Hi", url: "https://efficient.app/deals" }).success,
-    ).toBe(false);
+  it("keeps the marker out even when a broadcast links to an external site", () => {
+    const parsed = notificationSchema.parse({
+      title: "Hi",
+      url: "https://efficient.app/deals",
+      welcome: true,
+    });
+    expect(parsed).toEqual({ title: "Hi", body: "", url: "https://efficient.app/deals" });
   });
 });
 

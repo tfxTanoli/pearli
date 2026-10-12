@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { isExternalLink, isSitePath } from "@/lib/push/push-service.server";
 import { WELCOME_NOTIFICATION_URL } from "@/lib/push/welcome-destination";
 
 // Runs the real public/sw.js against a fake ServiceWorkerGlobalScope.
@@ -78,12 +79,23 @@ describe("service worker", () => {
     });
   });
 
-  it("never carries an off-site click destination", async () => {
-    await sw.fire("push", { data: pushData({ title: "x", url: "https://evil.example" }) });
-    await sw.fire("push", { data: pushData({ title: "x", url: "//evil.example" }) });
-    for (const call of sw.self.registration.showNotification.mock.calls as unknown[][]) {
-      expect(call[1]).toMatchObject({ data: { url: "/" } });
+  it("sends anything that is not a Pearli page or an https link to the home page", async () => {
+    for (const url of [
+      "//evil.example",
+      "http://evil.example",
+      "javascript:alert(1)",
+      "data:text/html,x",
+      "https://user:pass@evil.example",
+      "https://localhost/x",
+      "example.com",
+      42,
+      null,
+    ]) {
+      await sw.fire("push", { data: pushData({ title: "x", url }) });
     }
+    const calls = sw.self.registration.showNotification.mock.calls as unknown[][];
+    expect(calls).toHaveLength(9);
+    for (const call of calls) expect(call[1]).toMatchObject({ data: { url: "/" } });
   });
 
   it("opens the notification's page when clicked", async () => {
@@ -169,16 +181,21 @@ describe("service worker: welcome notification", () => {
     expect(sw.self.clients.openWindow).toHaveBeenCalledWith(WELCOME_NOTIFICATION_URL);
   });
 
+  it("sends the welcome to the deals page whatever link its payload carries", async () => {
+    for (const url of ["/", "/offers", "https://other.example/page", undefined]) {
+      await sw.fire("push", { data: pushData({ title: "Welcome", url, welcome: true }) });
+      expect(lastNotificationData().data).toEqual({ url: WELCOME_NOTIFICATION_URL });
+    }
+  });
+
   it.each([
-    ["no marker", { title: "x", url: WELCOME_NOTIFICATION_URL }],
-    ["marker false", { title: "x", url: WELCOME_NOTIFICATION_URL, welcome: false }],
-    ["marker as a string", { title: "x", url: WELCOME_NOTIFICATION_URL, welcome: "true" }],
+    ["no marker", { title: "x", url: "/offers" }],
+    ["marker false", { title: "x", url: "/offers", welcome: false }],
+    ["marker as a string", { title: "x", url: "/offers", welcome: "true" }],
     ["marker as a number", { title: "x", url: "/offers", welcome: 1 }],
   ])("does not treat a push with %s as the welcome", async (_label, payload) => {
     await sw.fire("push", { data: pushData(payload) });
-    const { data } = lastNotificationData();
-    expect(data.url).not.toBe(WELCOME_NOTIFICATION_URL);
-    expect(data.url.startsWith("/")).toBe(true);
+    expect(lastNotificationData().data).toEqual({ url: "/offers" });
   });
 
   it("keeps other notifications on their own Pearli page", async () => {
@@ -191,16 +208,88 @@ describe("service worker: welcome notification", () => {
     });
     expect(sw.self.clients.openWindow).toHaveBeenCalledWith(`${ORIGIN}/offers`);
   });
+});
+
+describe("service worker: external links chosen by the admin", () => {
+  let sw: ReturnType<typeof loadServiceWorker>;
+  beforeEach(() => {
+    sw = loadServiceWorker();
+  });
+  const storedUrl = () =>
+    (
+      (sw.self.registration.showNotification.mock.calls.at(-1) as unknown[])[1] as {
+        data: { url: string };
+      }
+    ).data.url;
+
+  it("stores an https link and opens exactly that site when clicked", async () => {
+    await sw.fire("push", {
+      data: pushData({
+        title: "Deal of the day",
+        body: "20% off",
+        url: "https://www.audiowallet.co.uk/offers?ref=push",
+      }),
+    });
+    expect(sw.self.registration.showNotification).toHaveBeenCalledWith("Deal of the day", {
+      body: "20% off",
+      icon: "/icon-256.png",
+      data: { url: "https://www.audiowallet.co.uk/offers?ref=push" },
+    });
+    // Nothing opens until the notification is clicked.
+    expect(sw.self.clients.openWindow).not.toHaveBeenCalled();
+
+    const close = vi.fn();
+    await sw.fire("notificationclick", { notification: { close, data: { url: storedUrl() } } });
+    expect(close).toHaveBeenCalled();
+    expect(sw.self.clients.openWindow).toHaveBeenCalledOnce();
+    expect(sw.self.clients.openWindow).toHaveBeenCalledWith(
+      "https://www.audiowallet.co.uk/offers?ref=push",
+    );
+  });
+
+  it("opens the external site even when Pearli tabs are open, without focusing them", async () => {
+    const focus = vi.fn();
+    sw = loadServiceWorker([{ url: `${ORIGIN}/`, focus }]);
+    await sw.fire("notificationclick", {
+      notification: { close: vi.fn(), data: { url: "https://example.com/deal" } },
+    });
+    expect(focus).not.toHaveBeenCalled();
+    expect(sw.self.clients.openWindow).toHaveBeenCalledWith("https://example.com/deal");
+  });
 
   it.each([
-    "https://efficient.app/deals/",
-    "https://efficient.app/deals?x=1",
-    "https://efficient.app/other",
-    "https://efficient.app.evil.example/deals",
-    "http://efficient.app/deals",
-    "https://evil.example",
-  ])("never opens any other external URL on click (%s)", async (url) => {
+    "http://example.com/deal",
+    "javascript:alert(1)",
+    "https://user:pass@example.com/",
+    "https://localhost/x",
+    "//example.com",
+  ])("falls back to the Pearli home page when a stored link is unsafe (%s)", async (url) => {
     await sw.fire("notificationclick", { notification: { close: vi.fn(), data: { url } } });
     expect(sw.self.clients.openWindow).toHaveBeenCalledWith(`${ORIGIN}/`);
+  });
+
+  it("agrees with the server about which links are allowed", async () => {
+    const cases = [
+      "/",
+      "/offers",
+      "/blog/post?x=1",
+      "https://efficient.app/deals",
+      "https://example.com",
+      "HTTPS://Example.com/A",
+      "http://example.com",
+      "//example.com",
+      "javascript:alert(1)",
+      "https://user:pass@example.com",
+      "https://localhost/x",
+      "example.com",
+      "ftp://example.com",
+    ];
+    for (const url of cases) {
+      await sw.fire("push", { data: pushData({ title: "x", url }) });
+      const stored = storedUrl();
+      if (isExternalLink(url)) expect(stored).toBe(new URL(url).href);
+      else if (isSitePath(url)) expect(stored).toBe(url);
+      else expect(stored).toBe("/");
+    }
   });
 });

@@ -32,7 +32,10 @@ export const Route = createFileRoute("/api/push/send")({
         const parsed = notificationSchema.safeParse(body);
         if (!parsed.success) {
           return Response.json(
-            { error: "Invalid notification", issues: parsed.error.issues },
+            {
+              error: parsed.error.issues[0]?.message ?? "Invalid notification",
+              issues: parsed.error.issues,
+            },
             { status: 400 },
           );
         }

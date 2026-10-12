@@ -92,14 +92,14 @@ describe("admin notifications page", () => {
     expect(within(welcome).getByText("https://efficient.app/deals")).toBeInTheDocument();
     expect(within(welcome).queryByRole("combobox")).toBeNull();
 
-    // Ordinary notifications keep their Pearli page picker, with no external option.
+    // Ordinary notifications keep every existing option, with the external one at the bottom.
     const send = screen.getByRole("form", { name: "Send a notification" });
     const picker = within(send).getByLabelText("Opens when tapped");
     expect(
       within(picker)
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toEqual(["Home", "Offers", "Founder’s note", "Blog", "Another page…"]);
+    ).toEqual(["Home", "Offers", "Founder’s note", "Blog", "Another page…", "External website…"]);
     expect(within(send).queryByText("https://efficient.app/deals")).toBeNull();
   });
 
@@ -132,6 +132,85 @@ describe("admin notifications page", () => {
     // Form cleared and subscriber count updated (3 - 1 removed).
     expect(within(form).getByLabelText(/^Title/)).toHaveValue("");
     expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("sends a notification that links to an external website", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    await unlock();
+    const form = await screen.findByRole("form", { name: "Send a notification" });
+    fireEvent.change(within(form).getByLabelText(/^Title/), { target: { value: "Deal" } });
+    // No website field until the external option is chosen.
+    expect(within(form).queryByLabelText(/^Website address/)).toBeNull();
+
+    fireEvent.change(within(form).getByLabelText("Opens when tapped"), {
+      target: { value: "external" },
+    });
+    const address = within(form).getByLabelText(/^Website address/);
+    expect(address).toHaveValue("");
+    expect(address).toBeRequired();
+    expect(address).toHaveAttribute("type", "url");
+    expect(address).toHaveAttribute("pattern", "https://.+");
+    fireEvent.change(address, { target: { value: "https://efficient.app/deals?ref=push" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Send to all subscribers" }));
+
+    // The confirmation names the site, so a wrong link is noticed before sending.
+    expect(confirm).toHaveBeenCalledWith(
+      "Send “Deal” to 3 subscribers now?\n\nTapping it will open efficient.app.",
+    );
+    expect(await within(form).findByRole("status")).toHaveTextContent("Sent to 2 of 3.");
+    const send = fetchMock.mock.calls.find(([url]) => url === "/api/push/send")!;
+    expect(JSON.parse(String(send[1].body))).toEqual({
+      title: "Deal",
+      body: "",
+      url: "https://efficient.app/deals?ref=push",
+    });
+    // The form resets to a Pearli page for the next notification.
+    expect(within(form).getByLabelText("Opens when tapped")).toHaveValue("/");
+    expect(within(form).queryByLabelText(/^Website address/)).toBeNull();
+  });
+
+  it("switches cleanly between a Pearli page, another page and an external website", async () => {
+    await unlock();
+    const form = await screen.findByRole("form", { name: "Send a notification" });
+    const picker = within(form).getByLabelText("Opens when tapped");
+
+    fireEvent.change(picker, { target: { value: "external" } });
+    fireEvent.change(within(form).getByLabelText(/^Website address/), {
+      target: { value: "https://example.com" },
+    });
+    // Back to a Pearli page: the external link is dropped.
+    fireEvent.change(picker, { target: { value: "/offers" } });
+    expect(within(form).queryByLabelText(/^Website address/)).toBeNull();
+    expect(picker).toHaveValue("/offers");
+
+    // External, then "Another page": the path field starts from "/", not the https link.
+    fireEvent.change(picker, { target: { value: "external" } });
+    fireEvent.change(within(form).getByLabelText(/^Website address/), {
+      target: { value: "https://example.com" },
+    });
+    fireEvent.change(picker, { target: { value: "other" } });
+    expect(within(form).getByLabelText(/^Page path/)).toHaveValue("/");
+    expect(within(form).queryByLabelText(/^Website address/)).toBeNull();
+  });
+
+  it("shows the server's explanation when a link is rejected", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    fetchMock.mockImplementation(async (url: string, init: RequestInit = {}) => {
+      if (url === "/api/push/settings")
+        return Response.json({ subscribers: 3, welcome: WELCOME, storage });
+      void init;
+      return Response.json(
+        { error: "Link must be a page on this site (e.g. /offers) or a full https:// address" },
+        { status: 400 },
+      );
+    });
+    await unlock();
+    const form = await screen.findByRole("form", { name: "Send a notification" });
+    fireEvent.change(within(form).getByLabelText(/^Title/), { target: { value: "Deal" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Send to all subscribers" }));
+    expect(await within(form).findByRole("alert")).toHaveTextContent(
+      "Link must be a page on this site (e.g. /offers) or a full https:// address",
+    );
   });
 
   it("sends nothing when the confirmation is cancelled", async () => {

@@ -6,8 +6,7 @@
 
 const DEFAULT_ICON = "/icon-256.png";
 
-// The welcome notification is the only one that opens an external site, and
-// this is the only external URL a notification click can ever open.
+// Where the welcome notification always goes, whatever link its payload carries.
 // Keep in sync with src/lib/push/welcome-destination.ts.
 const WELCOME_URL = "https://efficient.app/deals";
 
@@ -24,9 +23,29 @@ function safePath(url) {
   return typeof url === "string" && url.startsWith("/") && !url.startsWith("//") ? url : "/";
 }
 
-/** Full URL a clicked notification opens: the welcome URL, or a page on this site. */
+/**
+ * An external link a notification may open, or null. Must be a full https://
+ * address with a real host name and no embedded username or password, the same
+ * rule the server applies (isExternalLink in push-service.server.ts).
+ */
+function externalLink(url) {
+  if (typeof url !== "string" || !/^https:\/\//i.test(url)) return null;
+  try {
+    const parsed = new URL(url);
+    const allowed =
+      parsed.protocol === "https:" &&
+      !parsed.username &&
+      !parsed.password &&
+      parsed.hostname.includes(".");
+    return allowed ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Full URL a clicked notification opens: an external https link, or a page on this site. */
 function clickTarget(url) {
-  return url === WELCOME_URL ? WELCOME_URL : new URL(safePath(url), self.location.origin).href;
+  return externalLink(url) || new URL(safePath(url), self.location.origin).href;
 }
 
 self.addEventListener("push", (event) => {
@@ -43,9 +62,11 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(data.title || "Pearli", {
       body: data.body || "",
       icon: DEFAULT_ICON,
-      // Only a push the server marked as the welcome gets the external URL;
-      // an external URL sent any other way falls back to the home page.
-      data: { url: data.welcome === true ? WELCOME_URL : safePath(data.url) },
+      // The welcome always goes to WELCOME_URL. Anything else goes to the link
+      // the admin chose: an https website, or a page on this site (home if invalid).
+      data: {
+        url: data.welcome === true ? WELCOME_URL : externalLink(data.url) || safePath(data.url),
+      },
     }),
   );
 });

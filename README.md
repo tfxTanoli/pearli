@@ -64,7 +64,8 @@ curl -X POST https://<your-site>/api/push/send \
   -d '{"title":"New on Pearli","body":"Take a look","url":"/offers"}'
 ```
 
-`url` must be a path on this site. The response reports
+`url` is a path on this site (for example `/offers`) or a full `https://` link to
+another website. The response reports
 `{ total, sent, failed, removed }`. Subscriptions the push service reports as
 expired (404/410) are removed automatically.
 

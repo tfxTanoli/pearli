@@ -3,13 +3,13 @@ import { getSupabaseConfig, supabaseRest } from "@/lib/supabase.server";
 import {
   getSubscriptionStore,
   getVapidConfig,
-  notificationSchema,
+  sitePageNotificationSchema,
   type SubscriptionStore,
 } from "./push-service.server";
 import { sendWebPush, type PushTarget } from "./web-push.server";
 
 /** The welcome notification sent once to each new subscriber. */
-export const welcomeSettingsSchema = notificationSchema.extend({ enabled: z.boolean() });
+export const welcomeSettingsSchema = sitePageNotificationSchema.extend({ enabled: z.boolean() });
 
 export type WelcomeSettings = z.infer<typeof welcomeSettingsSchema>;
 
@@ -69,9 +69,9 @@ export async function saveWelcomeSettings(settings: WelcomeSettings): Promise<vo
 
 /**
  * Push payload for the welcome notification. `welcome: true` is what marks it
- * for the service worker, which then opens WELCOME_NOTIFICATION_URL on click.
- * Broadcasts are built from `notificationSchema`, which drops unknown fields,
- * so no other notification can carry the marker. `url` stays as the on-site
+ * for the service worker, which then opens WELCOME_NOTIFICATION_URL on click
+ * whatever `url` says. Broadcasts are built from `notificationSchema`, which
+ * drops unknown fields, so no other notification can carry the marker. `url` stays as the on-site
  * fallback for a browser still running a service worker from before the marker.
  */
 export function welcomePayload({ title, body, url }: WelcomeSettings): string {
