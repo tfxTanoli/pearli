@@ -142,7 +142,7 @@ describe("service worker: welcome notification", () => {
     };
 
   it("uses the same external URL as the shared constant", () => {
-    expect(WELCOME_NOTIFICATION_URL).toBe("https://efficient.app/deals");
+    expect(WELCOME_NOTIFICATION_URL).toBe("https://www.pearli.co.uk/");
     expect(source).toContain(`const WELCOME_URL = "${WELCOME_NOTIFICATION_URL}";`);
   });
 
@@ -168,7 +168,7 @@ describe("service worker: welcome notification", () => {
 
     expect(close).toHaveBeenCalled();
     expect(sw.self.clients.openWindow).toHaveBeenCalledOnce();
-    expect(sw.self.clients.openWindow).toHaveBeenCalledWith("https://efficient.app/deals");
+    expect(sw.self.clients.openWindow).toHaveBeenCalledWith("https://www.pearli.co.uk/");
   });
 
   it("opens the external site even when Pearli tabs are already open", async () => {
@@ -181,7 +181,7 @@ describe("service worker: welcome notification", () => {
     expect(sw.self.clients.openWindow).toHaveBeenCalledWith(WELCOME_NOTIFICATION_URL);
   });
 
-  it("sends the welcome to the deals page whatever link its payload carries", async () => {
+  it("sends the welcome to the Pearli website whatever link its payload carries", async () => {
     for (const url of ["/", "/offers", "https://other.example/page", undefined]) {
       await sw.fire("push", { data: pushData({ title: "Welcome", url, welcome: true }) });
       expect(lastNotificationData().data).toEqual({ url: WELCOME_NOTIFICATION_URL });

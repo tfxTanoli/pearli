@@ -156,7 +156,7 @@ describe("admin notifications page", () => {
   it("shows the welcome's fixed external destination instead of a page picker", async () => {
     await unlock();
     const welcome = await screen.findByRole("form", { name: "Welcome notification" });
-    expect(within(welcome).getByText("https://efficient.app/deals")).toBeInTheDocument();
+    expect(within(welcome).getByText("https://www.pearli.co.uk/")).toBeInTheDocument();
     expect(within(welcome).queryByRole("combobox")).toBeNull();
 
     // Ordinary notifications keep every existing option, with the external one at the bottom.
@@ -167,7 +167,7 @@ describe("admin notifications page", () => {
         .getAllByRole("option")
         .map((o) => o.textContent),
     ).toEqual(["Home", "Offers", "Founder’s note", "Blog", "Another page…", "External website…"]);
-    expect(within(send).queryByText("https://efficient.app/deals")).toBeNull();
+    expect(within(send).queryByText("https://www.pearli.co.uk/")).toBeNull();
   });
 
   it("sends a notification to everyone after confirmation and reports the result", async () => {

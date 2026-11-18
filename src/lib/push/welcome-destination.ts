@@ -3,4 +3,4 @@
  * notification that opens an external site; the service worker (public/sw.js)
  * holds its own copy of this URL and a test keeps the two in sync.
  */
-export const WELCOME_NOTIFICATION_URL = "https://efficient.app/deals";
+export const WELCOME_NOTIFICATION_URL = "https://www.pearli.co.uk/";

@@ -8,7 +8,7 @@ const DEFAULT_ICON = "/icon-256.png";
 
 // Where the welcome notification always goes, whatever link its payload carries.
 // Keep in sync with src/lib/push/welcome-destination.ts.
-const WELCOME_URL = "https://efficient.app/deals";
+const WELCOME_URL = "https://www.pearli.co.uk/";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
